@@ -3,6 +3,11 @@
     "displayName": "Django Cotton Template Tags",
     "description": "Go to definition support for Django Cotton template tags",
     "version": "0.1.0",
+    "publisher": "twentyforty",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/twentyforty/vscode-cotton-template-tags"
+    },
     "engines": {
         "vscode": "^1.85.0"
     },
