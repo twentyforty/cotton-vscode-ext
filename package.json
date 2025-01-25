@@ -6,8 +6,9 @@
     "publisher": "twentyforty",
     "repository": {
         "type": "git",
-        "url": "https://github.com/twentyforty/vscode-cotton-template-tags"
+        "url": "https://github.com/twentyforty/cotton-vscode-ext"
     },
+    "license": "MIT",
     "engines": {
         "vscode": "^1.85.0"
     },
