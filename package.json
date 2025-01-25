@@ -1,0 +1,42 @@
+{
+    "name": "vscode-cotton-template-tags",
+    "displayName": "Django Cotton Template Tags",
+    "description": "Go to definition support for Django Cotton template tags",
+    "version": "0.1.0",
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "activationEvents": [
+        "onLanguage:html",
+        "onLanguage:django-html"
+    ],
+    "main": "./out/extension.js",
+    "contributes": {
+        "configuration": {
+            "title": "Cotton Template Tags",
+            "properties": {
+                "cottonTemplateTags.templatePaths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": ["templates/cotton"],
+                    "description": "List of paths where cotton template files are located, relative to workspace root"
+                }
+            }
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.85.0",
+        "@types/node": "^16.18.34",
+        "typescript": "^5.1.3"
+    }
+}
