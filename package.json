@@ -2,7 +2,7 @@
     "name": "django-cotton",
     "displayName": "Django Cotton",
     "description": "VSCode extension for Django Cotton with template tag autocomplete and 'Go to Definition' support",
-    "version": "0.1.3",
+    "version": "0.1.4",
     "publisher": "twentyforty",
     "repository": {
         "type": "git",
