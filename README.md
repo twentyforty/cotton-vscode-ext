@@ -26,7 +26,7 @@ Configure template directories in your VS Code settings:
 
 ```json
 {
-    "cottonTemplateTags.templatePaths": [
+    "djangoCotton.templatePaths": [
         "templates/cotton",
         "frontend/templates/cotton"
     ]
@@ -41,7 +41,7 @@ You can set this in:
 Default value if not configured:
 ```json
 {
-    "cottonTemplateTags.templatePaths": ["templates/cotton"]
+    "djangoCotton.templatePaths": ["templates/cotton"]
 }
 ```
 
@@ -54,7 +54,7 @@ Default value if not configured:
 
 This extension contributes the following settings:
 
-* `cottonTemplateTags.templatePaths`: Array of paths where Cotton templates are located (relative to workspace root)
+* `djangoCotton.templatePaths`: Array of paths where Cotton templates are located (relative to workspace root)
 
 ## Known Issues
 

@@ -1,19 +1,19 @@
 {
-    "name": "vscode-cotton-template-tags",
-    "displayName": "Django Cotton Template Tags",
-    "description": "Go to definition support for Django Cotton template tags",
-    "version": "0.1.0",
+    "name": "django-cotton",
+    "displayName": "Django Cotton",
+    "description": "VSCode extension for Django Cotton with template tag autocomplete and 'Go to Definition' support",
+    "version": "0.1.3",
     "publisher": "twentyforty",
     "repository": {
         "type": "git",
         "url": "https://github.com/twentyforty/cotton-vscode-ext"
     },
-    "license": "MIT",
     "engines": {
         "vscode": "^1.85.0"
     },
     "categories": [
-        "Programming Languages"
+        "Programming Languages",
+        "Other"
     ],
     "activationEvents": [
         "onLanguage:html",
@@ -22,15 +22,15 @@
     "main": "./out/extension.js",
     "contributes": {
         "configuration": {
-            "title": "Cotton Template Tags",
+            "title": "Django Cotton",
             "properties": {
-                "cottonTemplateTags.templatePaths": {
+                "djangoCotton.templatePaths": {
                     "type": "array",
+                    "default": ["templates/cotton"],
                     "items": {
                         "type": "string"
                     },
-                    "default": ["templates/cotton"],
-                    "description": "List of paths where cotton template files are located, relative to workspace root"
+                    "description": "Paths to search for Cotton template files"
                 }
             }
         }
@@ -44,5 +44,18 @@
         "@types/vscode": "^1.85.0",
         "@types/node": "^16.18.34",
         "typescript": "^5.1.3"
+    },
+    "keywords": [
+        "django",
+        "cotton",
+        "template",
+        "html",
+        "autocomplete",
+        "web development"
+    ],
+    "icon": "images/icon.png",
+    "galleryBanner": {
+        "color": "#1e415e",
+        "theme": "dark"
     }
 }
