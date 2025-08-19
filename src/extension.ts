@@ -40,7 +40,7 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
 
         // Get the full tag text
         const fullTag = line.substring(tagStart, tagEnd + 1);
-        
+
         // Check if it's a cotton tag
         if (!fullTag.startsWith('<c-') && !fullTag.startsWith('</c-')) {
             return undefined;
@@ -51,7 +51,7 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
         if (!componentMatch) return undefined;
 
         const componentName = componentMatch[1]; // This is just the component name without c- prefix
-        
+
         // Calculate the range for just the component name
         const componentStart = tagStart + (fullTag.startsWith('</') ? 2 : 1); // Skip <c- or </c-
         const componentEnd = componentStart + componentName.length + 2;
@@ -69,7 +69,7 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
             tagPath.replace(/-/g, '_'), // hyphens to underscores
             tagPath.replace(/_/g, '-')  // underscores to hyphens
         ];
-        
+
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (!workspaceFolder) return undefined;
 
@@ -78,6 +78,7 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
 
         for (const templateBasePath of templatePaths) {
             for (const pathVariation of pathVariations) {
+                // First try the direct .html file
                 const templatePath = path.join(
                     workspaceFolder.uri.fsPath,
                     templateBasePath,
@@ -95,7 +96,27 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
                         }
                     ];
                 } catch {
-                    continue;
+                    // If direct .html file doesn't exist, try index.html in subdirectory
+                    const indexTemplatePath = path.join(
+                        workspaceFolder.uri.fsPath,
+                        templateBasePath,
+                        pathVariation,
+                        'index.html'
+                    );
+
+                    try {
+                        await fs.promises.access(indexTemplatePath);
+                        return [
+                            {
+                                originSelectionRange: hoverRange,
+                                targetUri: vscode.Uri.file(indexTemplatePath),
+                                targetRange: new vscode.Range(0, 0, 0, 0),
+                                targetSelectionRange: new vscode.Range(0, 0, 0, 0)
+                            }
+                        ];
+                    } catch {
+                        continue;
+                    }
                 }
             }
         }
@@ -110,7 +131,7 @@ class CottonCompletionProvider implements vscode.CompletionItemProvider {
         token: vscode.CancellationToken
     ): Promise<vscode.CompletionItem[] | undefined> {
         const linePrefix = document.lineAt(position).text.substring(0, position.character);
-        
+
         // Check if we're in a cotton tag context
         const cottonMatch = linePrefix.match(/<c-([^>]*?)$/);
         if (!cottonMatch) {
@@ -130,7 +151,7 @@ class CottonCompletionProvider implements vscode.CompletionItemProvider {
 
         for (const templateBasePath of templatePaths) {
             const fullTemplatePath = path.join(workspaceFolder.uri.fsPath, templateBasePath);
-            
+
             try {
                 await this.collectTemplateFiles(fullTemplatePath, '', completionItems);
             } catch (error) {
@@ -140,7 +161,7 @@ class CottonCompletionProvider implements vscode.CompletionItemProvider {
 
         // Filter items based on what's been typed
         if (partialName) {
-            const filteredItems = completionItems.filter(item => 
+            const filteredItems = completionItems.filter(item =>
                 item.label.toString().toLowerCase().startsWith(partialName.toLowerCase())
             );
             return filteredItems;
@@ -164,11 +185,25 @@ class CottonCompletionProvider implements vscode.CompletionItemProvider {
                     // Recursively scan subdirectories
                     await this.collectTemplateFiles(basePath, currentRelativePath, items);
                 } else if (entry.isFile() && entry.name.endsWith('.html')) {
-                    // Create completion item for HTML files
-                    const componentName = currentRelativePath
-                        .slice(0, -5) // Remove .html extension
-                        .replace(/[\\/]/g, '.') // Replace slashes with dots
-                        .replace(/_/g, '-'); // Replace underscores with hyphens
+                    let componentName: string;
+
+                    if (entry.name === 'index.html') {
+                        // For index.html files, use the parent directory name as the component name
+                        componentName = relativePath
+                            .replace(/[\\/]/g, '.') // Replace slashes with dots
+                            .replace(/_/g, '-'); // Replace underscores with hyphens
+                    } else {
+                        // For regular .html files, use the filename without extension
+                        componentName = currentRelativePath
+                            .slice(0, -5) // Remove .html extension
+                            .replace(/[\\/]/g, '.') // Replace slashes with dots
+                            .replace(/_/g, '-'); // Replace underscores with hyphens
+                    }
+
+                    // Skip if componentName is empty (root index.html)
+                    if (!componentName) {
+                        continue;
+                    }
 
                     const completionItem = new vscode.CompletionItem(
                         componentName,
@@ -177,7 +212,7 @@ class CottonCompletionProvider implements vscode.CompletionItemProvider {
 
                     // Add the full tag as the insertion text
                     completionItem.insertText = new vscode.SnippetString(`${componentName}>\${0}</c-${componentName}>`);
-                    
+
                     // Add documentation from the template file
                     try {
                         const templateContent = await fs.promises.readFile(
@@ -201,6 +236,6 @@ class CottonCompletionProvider implements vscode.CompletionItemProvider {
     }
 }
 
-export function deactivate() {}
+export function deactivate() { }
 
 
