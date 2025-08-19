@@ -30,31 +30,32 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
         const line = document.lineAt(position.line).text;
         const char = position.character;
 
+        console.log(`Finding tag definition at line ${position.line}, char ${char}`);
         // Find the start of the tag before the cursor
         let tagStart = line.lastIndexOf('<', char);
         if (tagStart === -1) return undefined;
 
-        // Find the end of the tag
-        let tagEnd = line.indexOf('>', tagStart);
-        if (tagEnd === -1) return undefined;
+        // For multiline tags, we need to find the tag name from just the opening part
+        // Look for the tag name right after the '<' 
+        const lineFromTagStart = line.substring(tagStart);
 
-        // Get the full tag text
-        const fullTag = line.substring(tagStart, tagEnd + 1);
-
-        // Check if it's a cotton tag
-        if (!fullTag.startsWith('<c-') && !fullTag.startsWith('</c-')) {
+        // Check if it's a cotton tag by looking at the beginning
+        if (!lineFromTagStart.startsWith('<c-') && !lineFromTagStart.startsWith('</c-')) {
             return undefined;
         }
 
-        // Extract just the component name (without < or attributes)
-        const componentMatch = fullTag.match(/^<\/?c-([\w.-]+)/);
+        // Extract just the component name (look for first space, newline, or > after the tag name)
+        const componentMatch = lineFromTagStart.match(/^<\/?c-([\w.-]+)/);
         if (!componentMatch) return undefined;
 
         const componentName = componentMatch[1]; // This is just the component name without c- prefix
 
+        console.log(`Found component: ${componentName}`);
+
         // Calculate the range for just the component name
-        const componentStart = tagStart + (fullTag.startsWith('</') ? 2 : 1); // Skip <c- or </c-
-        const componentEnd = componentStart + componentName.length + 2;
+        const isClosingTag = lineFromTagStart.startsWith('</');
+        const componentStart = tagStart + (isClosingTag ? 4 : 3); // Skip <c- or </c-
+        const componentEnd = componentStart + componentName.length;
         // Create a range that only includes the component name
         const hoverRange = new vscode.Range(
             new vscode.Position(position.line, componentStart),
@@ -85,8 +86,10 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
                     pathVariation + '.html'
                 );
 
+                console.log('Trying direct file:', templatePath);
                 try {
                     await fs.promises.access(templatePath);
+                    console.log('Found direct file:', templatePath);
                     return [
                         {
                             originSelectionRange: hoverRange,
@@ -104,8 +107,10 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
                         'index.html'
                     );
 
+                    console.log('Trying index file:', indexTemplatePath);
                     try {
                         await fs.promises.access(indexTemplatePath);
+                        console.log('Found index file:', indexTemplatePath);
                         return [
                             {
                                 originSelectionRange: hoverRange,
@@ -115,6 +120,7 @@ class CottonDefinitionProvider implements vscode.DefinitionProvider {
                             }
                         ];
                     } catch {
+                        console.log('File not found:', indexTemplatePath);
                         continue;
                     }
                 }
@@ -202,6 +208,7 @@ class CottonCompletionProvider implements vscode.CompletionItemProvider {
 
                     // Skip if componentName is empty (root index.html)
                     if (!componentName) {
+                        console.log(`Skipping empty componentName for: ${currentRelativePath}`);
                         continue;
                     }
 
