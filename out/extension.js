@@ -5,11 +5,19 @@ exports.deactivate = deactivate;
 const vscode = require("vscode");
 const path = require("path");
 const fs = require("fs");
+// Built-in Cotton directives
+const COTTON_BUILTIN_DIRECTIVES = ['vars', 'slot', 'component'];
 function activate(context) {
     const definitionProvider = new CottonDefinitionProvider();
     const completionProvider = new CottonCompletionProvider();
+    const attributeCompletionProvider = new CottonAttributeCompletionProvider();
+    const diagnosticCollection = vscode.languages.createDiagnosticCollection('cotton');
     context.subscriptions.push(vscode.languages.registerDefinitionProvider(['html', 'django-html'], definitionProvider), vscode.languages.registerCompletionItemProvider(['html', 'django-html'], completionProvider, '<' // Trigger character
-    ));
+    ), vscode.languages.registerCompletionItemProvider(['html', 'django-html'], attributeCompletionProvider, ' ', ':', '=' // Trigger characters for attributes
+    ), diagnosticCollection);
+    // Create and start the diagnostic provider
+    const diagnosticProvider = new CottonDiagnosticProvider(diagnosticCollection);
+    diagnosticProvider.activate(context);
 }
 class CottonDefinitionProvider {
     async provideDefinition(document, position, token) {
@@ -184,6 +192,236 @@ class CottonCompletionProvider {
         catch (error) {
             console.error(`Error scanning directory ${basePath}/${relativePath}:`, error);
         }
+    }
+}
+class CottonAttributeCompletionProvider {
+    async provideCompletionItems(document, position, token) {
+        const line = document.lineAt(position.line).text;
+        const char = position.character;
+        // Check if we're inside a Cotton component tag
+        const beforeCursor = line.substring(0, char);
+        // Look for the last Cotton tag opening before the cursor
+        // This regex finds: <c-component-name (with any attributes after)
+        const tagMatch = beforeCursor.match(/<c-([\w.-]+)(?:\s|>|$)/);
+        if (!tagMatch)
+            return undefined;
+        const componentName = tagMatch[1];
+        // Find where this tag starts
+        const tagStartIndex = beforeCursor.lastIndexOf(`<c-${componentName}`);
+        const afterTagName = beforeCursor.substring(tagStartIndex + `<c-${componentName}`.length);
+        // Only provide completions if there's whitespace after the component name
+        // This means we're in the attributes area: <c-component |cursor here
+        if (!afterTagName.match(/\s/))
+            return undefined;
+        // Check if we're past the closing tag of this specific opening tag
+        // Look for > after our current position that would close this tag
+        const restOfLine = line.substring(char);
+        const nextClosingTag = restOfLine.indexOf('>');
+        // If there's a closing tag and we find a new opening tag before it, 
+        // then we're not in this tag anymore
+        if (nextClosingTag !== -1) {
+            const beforeClosing = restOfLine.substring(0, nextClosingTag);
+            if (beforeClosing.includes('<')) {
+                return undefined;
+            }
+        }
+        // Get the component file path and parse c-vars
+        const componentFilePath = await this.findComponentFile(componentName);
+        if (!componentFilePath)
+            return undefined;
+        const cVars = await this.parseCVars(componentFilePath);
+        if (!cVars || cVars.length === 0)
+            return undefined;
+        // Create completion items for each c-var
+        const completionItems = [];
+        for (const cVar of cVars) {
+            // Create regular parameter completion item
+            const regularItem = new vscode.CompletionItem(cVar.name, vscode.CompletionItemKind.Field);
+            regularItem.insertText = new vscode.SnippetString(`${cVar.name}="\${1:${cVar.defaultValue || ''}}"`);
+            regularItem.documentation = new vscode.MarkdownString(`**${cVar.name}** (text parameter)\n\nDefault: \`${cVar.defaultValue || 'undefined'}\`\n\n🏷️ Cotton component parameter`);
+            regularItem.sortText = `0_${cVar.name}`; // High priority sorting
+            regularItem.detail = '🏷️ Cotton parameter';
+            regularItem.preselect = true; // Preselect Cotton parameters
+            regularItem.kind = vscode.CompletionItemKind.Field;
+            completionItems.push(regularItem);
+            // Create Django expression parameter completion item (with colon)
+            const expressionItem = new vscode.CompletionItem(`:${cVar.name}`, vscode.CompletionItemKind.Field);
+            expressionItem.insertText = new vscode.SnippetString(`:${cVar.name}="\${1:${cVar.defaultValue || ''}}"`);
+            expressionItem.documentation = new vscode.MarkdownString(`**:${cVar.name}** (Django expression parameter)\n\nDefault: \`${cVar.defaultValue || 'undefined'}\`\n\n🔗 Cotton Django expression parameter`);
+            expressionItem.sortText = `0_:${cVar.name}`; // High priority sorting
+            expressionItem.detail = '🔗 Cotton Django expression';
+            expressionItem.preselect = true; // Preselect Cotton parameters
+            expressionItem.kind = vscode.CompletionItemKind.Field;
+            completionItems.push(expressionItem);
+        }
+        return completionItems;
+    }
+    async findComponentFile(componentName) {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder)
+            return undefined;
+        const config = vscode.workspace.getConfiguration('djangoCotton');
+        const templatePaths = config.get('templatePaths', ['templates/cotton']);
+        const tagPath = componentName.replace(/\./g, '/');
+        const pathVariations = [
+            tagPath,
+            tagPath.replace(/-/g, '_'),
+            tagPath.replace(/_/g, '-')
+        ];
+        for (const templateBasePath of templatePaths) {
+            for (const pathVariation of pathVariations) {
+                // Try direct file first
+                const templatePath = path.join(workspaceFolder.uri.fsPath, templateBasePath, pathVariation + '.html');
+                try {
+                    await fs.promises.access(templatePath);
+                    return templatePath;
+                }
+                catch {
+                    // Try index file
+                    const indexPath = path.join(workspaceFolder.uri.fsPath, templateBasePath, pathVariation, 'index.html');
+                    try {
+                        await fs.promises.access(indexPath);
+                        return indexPath;
+                    }
+                    catch {
+                        continue;
+                    }
+                }
+            }
+        }
+        return undefined;
+    }
+    async parseCVars(filePath) {
+        try {
+            const content = await fs.promises.readFile(filePath, 'utf-8');
+            const cVars = [];
+            // Match c-vars tag at the beginning of the file
+            const cVarsMatch = content.match(/<c-vars\s+([^>]+)>/);
+            if (!cVarsMatch)
+                return undefined;
+            const attributesString = cVarsMatch[1];
+            // Parse attributes from the c-vars tag
+            // This regex handles: name="value", :name="value", name, :name
+            const attributeRegex = /(:?)(\w+)(?:=["']([^"']*)["'])?/g;
+            let match;
+            while ((match = attributeRegex.exec(attributesString)) !== null) {
+                const hasColon = match[1] === ':';
+                const name = match[2];
+                const defaultValue = match[3] || '';
+                cVars.push({
+                    name,
+                    defaultValue,
+                    isDjangoExpression: hasColon
+                });
+            }
+            return cVars;
+        }
+        catch (error) {
+            console.error('Error parsing c-vars:', error);
+            return undefined;
+        }
+    }
+}
+class CottonDiagnosticProvider {
+    constructor(diagnosticCollection) {
+        this.diagnosticCollection = diagnosticCollection;
+    }
+    activate(context) {
+        // Listen for document changes
+        const onDidChangeTextDocument = vscode.workspace.onDidChangeTextDocument(event => {
+            this.updateDiagnostics(event.document);
+        });
+        // Listen for document opens
+        const onDidOpenTextDocument = vscode.workspace.onDidOpenTextDocument(document => {
+            this.updateDiagnostics(document);
+        });
+        // Listen for document saves
+        const onDidSaveTextDocument = vscode.workspace.onDidSaveTextDocument(document => {
+            this.updateDiagnostics(document);
+        });
+        // Check all currently open documents
+        vscode.workspace.textDocuments.forEach(document => {
+            this.updateDiagnostics(document);
+        });
+        context.subscriptions.push(onDidChangeTextDocument, onDidOpenTextDocument, onDidSaveTextDocument);
+    }
+    async updateDiagnostics(document) {
+        // Only process HTML and Django HTML files
+        if (!['html', 'django-html'].includes(document.languageId)) {
+            return;
+        }
+        const diagnostics = [];
+        const text = document.getText();
+        // Find all Cotton tags in the document
+        const cottonTagRegex = /<c-([\w.-]+)(?:\s[^>]*)?(?:\/?>|>)/g;
+        let match;
+        while ((match = cottonTagRegex.exec(text)) !== null) {
+            const componentName = match[1];
+            const tagStart = match.index;
+            const tagEnd = tagStart + match[0].length;
+            // Skip built-in Cotton directives
+            if (COTTON_BUILTIN_DIRECTIVES.includes(componentName)) {
+                continue;
+            }
+            // Check if component file exists
+            const componentExists = await this.checkComponentExists(componentName);
+            if (!componentExists) {
+                // Create diagnostic for missing component
+                const startPos = document.positionAt(tagStart);
+                const endPos = document.positionAt(tagStart + `<c-${componentName}`.length);
+                const diagnostic = new vscode.Diagnostic(new vscode.Range(startPos, endPos), `Cotton component '${componentName}' not found. Expected file: ${this.getExpectedPaths(componentName).join(' or ')}`, vscode.DiagnosticSeverity.Error);
+                diagnostic.code = 'cotton-component-not-found';
+                diagnostic.source = 'Cotton';
+                diagnostics.push(diagnostic);
+            }
+        }
+        this.diagnosticCollection.set(document.uri, diagnostics);
+    }
+    async checkComponentExists(componentName) {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder)
+            return false;
+        const config = vscode.workspace.getConfiguration('djangoCotton');
+        const templatePaths = config.get('templatePaths', ['templates/cotton']);
+        const tagPath = componentName.replace(/\./g, '/');
+        const pathVariations = [
+            tagPath,
+            tagPath.replace(/-/g, '_'),
+            tagPath.replace(/_/g, '-')
+        ];
+        for (const templateBasePath of templatePaths) {
+            for (const pathVariation of pathVariations) {
+                // Try direct file first
+                const templatePath = path.join(workspaceFolder.uri.fsPath, templateBasePath, pathVariation + '.html');
+                try {
+                    await fs.promises.access(templatePath);
+                    return true;
+                }
+                catch {
+                    // Try index file
+                    const indexPath = path.join(workspaceFolder.uri.fsPath, templateBasePath, pathVariation, 'index.html');
+                    try {
+                        await fs.promises.access(indexPath);
+                        return true;
+                    }
+                    catch {
+                        continue;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+    getExpectedPaths(componentName) {
+        const config = vscode.workspace.getConfiguration('djangoCotton');
+        const templatePaths = config.get('templatePaths', ['templates/cotton']);
+        const tagPath = componentName.replace(/\./g, '/');
+        const paths = [];
+        for (const templateBasePath of templatePaths) {
+            paths.push(`${templateBasePath}/${tagPath}.html`);
+            paths.push(`${templateBasePath}/${tagPath}/index.html`);
+        }
+        return paths;
     }
 }
 function deactivate() { }
