@@ -232,27 +232,33 @@ class CottonAttributeCompletionProvider {
         const cVars = await this.parseCVars(componentFilePath);
         if (!cVars || cVars.length === 0)
             return undefined;
+        // Parse existing attributes on the tag to avoid duplicates
+        const existingAttributes = this.parseExistingAttributes(beforeCursor, componentName);
         // Create completion items for each c-var
         const completionItems = [];
         for (const cVar of cVars) {
-            // Create regular parameter completion item
-            const regularItem = new vscode.CompletionItem(cVar.name, vscode.CompletionItemKind.Field);
-            regularItem.insertText = new vscode.SnippetString(`${cVar.name}="\${1:${cVar.defaultValue || ''}}"`);
-            regularItem.documentation = new vscode.MarkdownString(`**${cVar.name}** (text parameter)\n\nDefault: \`${cVar.defaultValue || 'undefined'}\`\n\n🏷️ Cotton component parameter`);
-            regularItem.sortText = `0_${cVar.name}`; // High priority sorting
-            regularItem.detail = '🏷️ Cotton parameter';
-            regularItem.preselect = true; // Preselect Cotton parameters
-            regularItem.kind = vscode.CompletionItemKind.Field;
-            completionItems.push(regularItem);
-            // Create Django expression parameter completion item (with colon)
-            const expressionItem = new vscode.CompletionItem(`:${cVar.name}`, vscode.CompletionItemKind.Field);
-            expressionItem.insertText = new vscode.SnippetString(`:${cVar.name}="\${1:${cVar.defaultValue || ''}}"`);
-            expressionItem.documentation = new vscode.MarkdownString(`**:${cVar.name}** (Django expression parameter)\n\nDefault: \`${cVar.defaultValue || 'undefined'}\`\n\n🔗 Cotton Django expression parameter`);
-            expressionItem.sortText = `0_:${cVar.name}`; // High priority sorting
-            expressionItem.detail = '🔗 Cotton Django expression';
-            expressionItem.preselect = true; // Preselect Cotton parameters
-            expressionItem.kind = vscode.CompletionItemKind.Field;
-            completionItems.push(expressionItem);
+            // Skip if regular parameter already exists
+            if (!existingAttributes.has(cVar.name)) {
+                const regularItem = new vscode.CompletionItem(cVar.name, vscode.CompletionItemKind.Field);
+                regularItem.insertText = new vscode.SnippetString(`${cVar.name}="\${1:${cVar.defaultValue || ''}}"`);
+                regularItem.documentation = new vscode.MarkdownString(`**${cVar.name}** (text parameter)\n\nDefault: \`${cVar.defaultValue || 'undefined'}\`\n\n🏷️ Cotton component parameter`);
+                regularItem.sortText = `0_${cVar.name}`; // High priority sorting
+                regularItem.detail = '🏷️ Cotton parameter';
+                regularItem.preselect = true; // Preselect Cotton parameters
+                regularItem.kind = vscode.CompletionItemKind.Field;
+                completionItems.push(regularItem);
+            }
+            // Skip if Django expression parameter already exists
+            if (!existingAttributes.has(`:${cVar.name}`)) {
+                const expressionItem = new vscode.CompletionItem(`:${cVar.name}`, vscode.CompletionItemKind.Field);
+                expressionItem.insertText = new vscode.SnippetString(`:${cVar.name}="\${1:${cVar.defaultValue || ''}}"`);
+                expressionItem.documentation = new vscode.MarkdownString(`**:${cVar.name}** (Django expression parameter)\n\nDefault: \`${cVar.defaultValue || 'undefined'}\`\n\n🔗 Django Cotton expression parameter`);
+                expressionItem.sortText = `0_:${cVar.name}`; // High priority sorting
+                expressionItem.detail = '🔗 Django Cotton expression';
+                expressionItem.preselect = true; // Preselect Cotton parameters
+                expressionItem.kind = vscode.CompletionItemKind.Field;
+                completionItems.push(expressionItem);
+            }
         }
         return completionItems;
     }
@@ -290,6 +296,29 @@ class CottonAttributeCompletionProvider {
             }
         }
         return undefined;
+    }
+    parseExistingAttributes(beforeCursor, componentName) {
+        const existingAttributes = new Set();
+        // Find the start of this specific tag
+        const tagStartIndex = beforeCursor.lastIndexOf(`<c-${componentName}`);
+        if (tagStartIndex === -1)
+            return existingAttributes;
+        // Get the portion of the tag that's been typed so far
+        const tagContent = beforeCursor.substring(tagStartIndex);
+        // Match all attributes in the tag: attr="value", :attr="value", attr, :attr
+        const attributeRegex = /\s+(:?)(\w+)(?:=["'][^"']*["'])?/g;
+        let match;
+        while ((match = attributeRegex.exec(tagContent)) !== null) {
+            const hasColon = match[1] === ':';
+            const attrName = match[2];
+            if (hasColon) {
+                existingAttributes.add(`:${attrName}`);
+            }
+            else {
+                existingAttributes.add(attrName);
+            }
+        }
+        return existingAttributes;
     }
     async parseCVars(filePath) {
         try {
