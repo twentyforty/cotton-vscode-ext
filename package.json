@@ -2,7 +2,7 @@
     "name": "django-cotton",
     "displayName": "Django Cotton",
     "description": "Comprehensive VS Code support for Django Cotton templates with intelligent autocompletion, navigation, and error detection",
-    "version": "0.2.0",
+    "version": "0.2.1",
     "publisher": "twentyforty",
     "repository": {
         "type": "git",

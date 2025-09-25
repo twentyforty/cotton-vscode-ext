@@ -49,6 +49,9 @@ Default: `["templates/cotton"]`
 
 ## Release Notes
 
+### 0.2.1
+- **🧠 Smart Parameter Filtering**: Parameter intellisense no longer suggests attributes that already exist on the tag
+
 ### 0.2.0
 - **🏷️ C-Vars Parameter Intellisense**: Autocomplete component parameters from `<c-vars>` definitions
 - **🔍 Error Detection**: Red squiggles for missing Cotton component files
