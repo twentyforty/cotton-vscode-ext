@@ -35,12 +35,12 @@ class CottonDefinitionProvider {
             return undefined;
         const componentName = componentMatch[1]; // This is just the component name without c- prefix
         // Calculate the range for just the component name
-        const componentStart = tagStart + (fullTag.startsWith('</') ? 2 : 1); // Skip <c- or </c-
-        const componentEnd = componentStart + componentName.length + 2;
+        const prefixLength = fullTag.startsWith('</') ? 4 : 3; // Length of "</c-" or "<c-"
+        const componentStart = tagStart + prefixLength;
+        const componentEnd = componentStart + componentName.length;
         // Create a range that only includes the component name
         const hoverRange = new vscode.Range(new vscode.Position(position.line, componentStart), new vscode.Position(position.line, componentEnd));
         const tagPath = componentName.replace(/\./g, '/');
-        console.log('Extracted path:', tagPath);
         const pathVariations = [
             tagPath, // original
             tagPath.replace(/-/g, '_'), // hyphens to underscores
@@ -53,6 +53,7 @@ class CottonDefinitionProvider {
         const templatePaths = config.get('templatePaths', ['templates/cotton']);
         for (const templateBasePath of templatePaths) {
             for (const pathVariation of pathVariations) {
+                // First try the direct component.html file
                 const templatePath = path.join(workspaceFolder.uri.fsPath, templateBasePath, pathVariation + '.html');
                 try {
                     await fs.promises.access(templatePath);
@@ -66,7 +67,22 @@ class CottonDefinitionProvider {
                     ];
                 }
                 catch {
-                    continue;
+                    // If component.html doesn't exist, try index.html in the component directory
+                    const indexPath = path.join(workspaceFolder.uri.fsPath, templateBasePath, pathVariation, 'index.html');
+                    try {
+                        await fs.promises.access(indexPath);
+                        return [
+                            {
+                                originSelectionRange: hoverRange,
+                                targetUri: vscode.Uri.file(indexPath),
+                                targetRange: new vscode.Range(0, 0, 0, 0),
+                                targetSelectionRange: new vscode.Range(0, 0, 0, 0)
+                            }
+                        ];
+                    }
+                    catch {
+                        continue;
+                    }
                 }
             }
         }
@@ -111,6 +127,33 @@ class CottonCompletionProvider {
             for (const entry of entries) {
                 const currentRelativePath = path.join(relativePath, entry.name);
                 if (entry.isDirectory()) {
+                    // Check if this directory has an index.html file
+                    const indexPath = path.join(basePath, currentRelativePath, 'index.html');
+                    try {
+                        await fs.promises.access(indexPath);
+                        // Create completion item for index.html files
+                        const componentName = currentRelativePath
+                            .replace(/[\\/]/g, '.') // Replace slashes with dots
+                            .replace(/_/g, '-'); // Replace underscores with hyphens
+                        const completionItem = new vscode.CompletionItem(componentName, vscode.CompletionItemKind.Snippet);
+                        // Add the full tag as the insertion text
+                        completionItem.insertText = new vscode.SnippetString(`${componentName}>\${0}</c-${componentName}>`);
+                        // Add documentation from the index.html file
+                        try {
+                            const templateContent = await fs.promises.readFile(indexPath, 'utf-8');
+                            const firstLine = templateContent.split('\n')[0].trim();
+                            if (firstLine.startsWith('<!--') && firstLine.endsWith('-->')) {
+                                completionItem.documentation = new vscode.MarkdownString(firstLine.slice(4, -3).trim());
+                            }
+                        }
+                        catch (error) {
+                            console.error(`Error reading index.html file: ${currentRelativePath}`, error);
+                        }
+                        items.push(completionItem);
+                    }
+                    catch {
+                        // No index.html in this directory, continue
+                    }
                     // Recursively scan subdirectories
                     await this.collectTemplateFiles(basePath, currentRelativePath, items);
                 }
