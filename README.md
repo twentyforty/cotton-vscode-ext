@@ -56,8 +56,6 @@ Default: `["templates/cotton"]`
 - **🏷️ C-Vars Parameter Intellisense**: Autocomplete component parameters from `<c-vars>` definitions
 - **🔍 Error Detection**: Red squiggles for missing Cotton component files
 - **📁 Index.html Support**: Full support for Django Cotton's index.html pattern
-- **🎯 Enhanced Navigation**: Improved go-to-definition with fallback to index files
-- **⚡ Real-time Diagnostics**: Live error detection as you type
 
 ### 0.1.4
 - Updated README to reflect new features
