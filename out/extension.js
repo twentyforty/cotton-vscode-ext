@@ -21,33 +21,17 @@ function activate(context) {
 }
 class CottonDefinitionProvider {
     async provideDefinition(document, position, token) {
-        const line = document.lineAt(position.line).text;
-        const char = position.character;
-        // Find the start of the tag before the cursor
-        let tagStart = line.lastIndexOf('<', char);
-        if (tagStart === -1)
-            return undefined;
-        // Find the end of the tag
-        let tagEnd = line.indexOf('>', tagStart);
-        if (tagEnd === -1)
-            return undefined;
-        // Get the full tag text
-        const fullTag = line.substring(tagStart, tagEnd + 1);
-        // Check if it's a cotton tag
-        if (!fullTag.startsWith('<c-') && !fullTag.startsWith('</c-')) {
+        console.log('Cotton: provideDefinition called at position:', position.line, position.character);
+        // Find the Cotton tag that contains the cursor position
+        const tagInfo = this.findCottonTagAtPosition(document, position);
+        if (!tagInfo) {
+            console.log('Cotton: No tag info found');
             return undefined;
         }
-        // Extract just the component name (without < or attributes)
-        const componentMatch = fullTag.match(/^<\/?c-([\w.-]+)/);
-        if (!componentMatch)
-            return undefined;
-        const componentName = componentMatch[1]; // This is just the component name without c- prefix
-        // Calculate the range for just the component name
-        const prefixLength = fullTag.startsWith('</') ? 4 : 3; // Length of "</c-" or "<c-"
-        const componentStart = tagStart + prefixLength;
-        const componentEnd = componentStart + componentName.length;
+        console.log('Cotton: Found component:', tagInfo.componentName);
+        const { componentName, componentNameRange } = tagInfo;
         // Create a range that only includes the component name
-        const hoverRange = new vscode.Range(new vscode.Position(position.line, componentStart), new vscode.Position(position.line, componentEnd));
+        const hoverRange = componentNameRange;
         const tagPath = componentName.replace(/\./g, '/');
         const pathVariations = [
             tagPath, // original
@@ -94,6 +78,41 @@ class CottonDefinitionProvider {
                 }
             }
         }
+        return undefined;
+    }
+    findCottonTagAtPosition(document, position) {
+        const documentText = document.getText();
+        const offset = document.offsetAt(position);
+        console.log('Cotton: Looking for tag at offset:', offset);
+        console.log('Cotton: Document length:', documentText.length);
+        // Find all Cotton tags in the document using a more comprehensive regex
+        // This regex matches the entire tag including multi-line attributes
+        const cottonTagRegex = /<\/?c-([\w.-]+)(?:[^>]*?)>/gs;
+        let match;
+        let matchCount = 0;
+        while ((match = cottonTagRegex.exec(documentText)) !== null) {
+            matchCount++;
+            const tagStart = match.index;
+            const tagEnd = tagStart + match[0].length;
+            const componentName = match[1];
+            console.log(`Cotton: Found tag ${matchCount}: "${match[0]}" at ${tagStart}-${tagEnd}, component: ${componentName}`);
+            // Check if cursor is within this tag
+            if (offset >= tagStart && offset <= tagEnd) {
+                console.log('Cotton: Cursor is within this tag!');
+                // Find the exact position of the component name within the tag
+                const tagText = match[0];
+                const isClosingTag = tagText.startsWith('</');
+                // Calculate the exact position of the component name
+                const prefixLength = isClosingTag ? 4 : 3; // Length of "</c-" or "<c-"
+                const componentNameStart = document.positionAt(tagStart + prefixLength);
+                const componentNameEnd = document.positionAt(tagStart + prefixLength + componentName.length);
+                return {
+                    componentName,
+                    componentNameRange: new vscode.Range(componentNameStart, componentNameEnd)
+                };
+            }
+        }
+        console.log(`Cotton: Found ${matchCount} tags total, none contain cursor`);
         return undefined;
     }
 }
