@@ -269,29 +269,50 @@ export class ComponentIndex {
     ]);
 
     /**
-     * Heuristically find candidate named-slot identifiers for a component: variables it
-     * references in its body ({{ name }}, {% if name %}) that aren't declared c-vars, the
-     * default slot, or common template globals. Used to power completion inside <c-slot name="">.
+     * Heuristically collect every variable name a component's body references via
+     * `{{ name }}` or `{% if name %}` (the two patterns Cotton slots are actually rendered
+     * through). Shared by slot-name completion and slot-name validation.
      */
-    async getSlotCandidates(filePath: string, excludeNames: Set<string>): Promise<string[]> {
+    private async getReferencedVariableNames(filePath: string): Promise<Set<string>> {
         const content = await this.getComponentFileContent(filePath);
-        if (!content) return [];
+        if (!content) return new Set();
 
         const bodyContent = content.replace(/<c-vars\s+[^>]+>/, '');
-        const candidates = new Set<string>();
+        const names = new Set<string>();
         const patterns = [/\{\{\s*([a-zA-Z_]\w*)/g, /\{%\s*if\s+([a-zA-Z_]\w*)/g];
 
         for (const pattern of patterns) {
             let match;
             while ((match = pattern.exec(bodyContent)) !== null) {
-                const name = match[1];
-                if (!ComponentIndex.RESERVED_TEMPLATE_NAMES.has(name) && !excludeNames.has(name)) {
-                    candidates.add(name);
-                }
+                names.add(match[1]);
             }
         }
 
-        return [...candidates];
+        return names;
+    }
+
+    /**
+     * Heuristically find candidate named-slot identifiers for a component: variables it
+     * references in its body ({{ name }}, {% if name %}) that aren't declared c-vars, the
+     * default slot, or common template globals. Used to power completion inside <c-slot name="">.
+     */
+    async getSlotCandidates(filePath: string, excludeNames: Set<string>): Promise<string[]> {
+        const referenced = await this.getReferencedVariableNames(filePath);
+        return [...referenced].filter(
+            name => !ComponentIndex.RESERVED_TEMPLATE_NAMES.has(name) && !excludeNames.has(name)
+        );
+    }
+
+    /**
+     * Whether `<c-slot name="slotName">` actually does something for this component, i.e.
+     * whether its body references that name via `{{ slotName }}` or `{% if slotName %}`
+     * anywhere. Used to flag likely-typo'd slot names as a diagnostic. This is a heuristic
+     * (same patterns as getSlotCandidates) so it won't catch every possible usage (e.g. a name
+     * only referenced through `{% with %}` or `{% for %}`), but keeps false positives low.
+     */
+    async hasSlotReference(filePath: string, slotName: string): Promise<boolean> {
+        const referenced = await this.getReferencedVariableNames(filePath);
+        return referenced.has(slotName);
     }
 
     private escapeRegex(str: string): string {

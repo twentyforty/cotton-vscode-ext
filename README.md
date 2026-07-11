@@ -10,7 +10,7 @@ Comprehensive VS Code support for [Django Cotton](https://django-cotton.com/) te
 - **Hover Documentation** - Hover a component tag or prop to see its documentation, default value, and full prop list
 - **Find All References** - Standard "Find All References" on a component usage, or right-click a component file in the Explorer to find every place it's used
 - **Unused Component Detection** - Component files with no usages anywhere in the workspace are badged in the file explorer
-- **Error Detection** - Highlights missing component files, including unresolved `<c-component is="...">` targets
+- **Error Detection** - Highlights missing component files (including unresolved `<c-component is="...">` targets) and slot names that don't match anything the component actually references (likely typos)
 - **Index.html Support** - Full support for Django Cotton's folder structure patterns
 - **Any Editor** - Built as a language server, so the same intelligence can power other LSP-capable editors (Neovim, Sublime, etc.), not just VS Code
 

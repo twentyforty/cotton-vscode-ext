@@ -145,7 +145,7 @@ export class UsageIndex {
         const tagRegex = /<c-([\w.-]+)/g;
         let match;
         while ((match = tagRegex.exec(scannable)) !== null) {
-            const name = match[1];
+            const name = this.normalizeComponentName(match[1]);
             if (name === 'vars' || name === 'slot' || name === 'component') continue;
 
             const start = match.index + 1; // skip '<', keep the "c-foo" span (tag name incl. prefix)
@@ -160,17 +160,27 @@ export class UsageIndex {
         // a plain `\b` would also match right after the colon.
         const isAttrRegex = /<c-component\b[^>]*?\sis\s*=\s*"([^"{}%]*)"/g;
         while ((match = isAttrRegex.exec(scannable)) !== null) {
-            const name = match[1];
-            if (!name) continue;
-            const valueStart = match.index + match[0].lastIndexOf(name);
-            const valueEnd = valueStart + name.length;
-            this.addUsage(name, uri, newlineOffsets, valueStart, valueEnd);
-            componentNamesInFile.add(name);
+            const rawName = match[1];
+            if (!rawName) continue;
+            const valueStart = match.index + match[0].lastIndexOf(rawName);
+            const valueEnd = valueStart + rawName.length;
+            this.addUsage(this.normalizeComponentName(rawName), uri, newlineOffsets, valueStart, valueEnd);
+            componentNamesInFile.add(this.normalizeComponentName(rawName));
         }
 
         if (componentNamesInFile.size > 0) {
             this.componentsByUri.set(uri, componentNamesInFile);
         }
+    }
+
+    /**
+     * Canonicalize a component name so that kebab-case and snake_case spellings of the same
+     * tag/`is` value (e.g. `icons.circle-check` and `icons.circle_check`) are treated as the
+     * same component for reference tracking - matching the canonical (kebab-case) form
+     * ComponentIndex uses when listing components from disk.
+     */
+    private normalizeComponentName(name: string): string {
+        return name.replace(/_/g, '-');
     }
 
     private addUsage(componentName: string, uri: string, newlineOffsets: number[], start: number, end: number): void {
@@ -221,12 +231,12 @@ export class UsageIndex {
      * All Locations where the given component name is used, across the workspace.
      */
     getReferences(componentName: string): Location[] {
-        const entries = this.usagesByComponent.get(componentName) || [];
+        const entries = this.usagesByComponent.get(this.normalizeComponentName(componentName)) || [];
         return entries.map(e => Location.create(e.uri, e.range));
     }
 
     getUsageCount(componentName: string): number {
-        return this.usagesByComponent.get(componentName)?.length || 0;
+        return this.usagesByComponent.get(this.normalizeComponentName(componentName))?.length || 0;
     }
 
     /**

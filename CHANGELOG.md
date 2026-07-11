@@ -25,10 +25,13 @@ A full rewrite of the extension onto a **Language Server Protocol (LSP)** archit
 - **Autocomplete for built-in directives.** `<c-vars>`, `<c-slot>`, and `<c-component>` now show up in tag-name autocomplete alongside real components, each with their own attribute completions (`name` for `c-slot`; `is` / `:is` for `c-component`).
 - **Named slot completion.** Inside `<c-slot name="...">`, autocomplete suggests candidate slot names based on variable references found in the target component's body.
 - **Boolean attribute completion.** For a `<c-vars>` prop with no default value (commonly used as a boolean flag), autocomplete now also offers a valueless completion (e.g. `disabled`) alongside the usual `disabled="..."` and `:disabled="..."` variants.
+- **Slot name typo detection.** `<c-slot name="...">` is now checked against the enclosing component's body; a name that isn't referenced anywhere via `{{ name }}` or `{% if name %}` is flagged with a warning, catching typos and stale/renamed slots.
+- **Prop go-to-definition through `<c-component is="...">`.** Cmd/Ctrl+click on any attribute other than `is` (e.g. `label` in `<c-component is="button" label="...">`) now resolves as a prop against whatever component `is` currently points to, exactly like it would on a direct `<c-button label="...">` usage.
 
 ### Fixes
 
 - **Kebab-case/snake_case prop matching.** Go-to-definition and "used in body" detection for a prop like `icon-name` now correctly matches its snake_case form (`icon_name`) inside Django template expressions, matching Django Cotton's actual attribute-name conversion behavior.
+- **Kebab-case/snake_case component identity.** `<c-icons.circle-check>` and `<c-icons.circle_check>` are now treated as the same component for "Find All References" and unused-component detection - previously each spelling was indexed separately, so references written with one spelling wouldn't show up when searching from the other.
 - **Multi-line tags and improved end-tag detection**, carried forward and re-verified against the new AST-based parser.
 - Attribute matching under the cursor no longer requires a leading `:` - plain prop names (e.g. `label`), single-colon dynamic props (`:count`), and escaped double-colon props (`::class`) all resolve correctly for hover and go-to-definition.
 

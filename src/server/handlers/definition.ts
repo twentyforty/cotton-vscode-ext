@@ -30,6 +30,8 @@ export class DefinitionHandler {
             // syntax ({{ }} / {% %}), it can't be resolved statically, so we leave it alone.
             if (component.name === 'component') {
                 const isAttr = this.parser.getAttributeValue(content, component.node, 'is');
+
+                // Cmd/Ctrl+click the `is` value itself -> jump to that component's file.
                 if (
                     isAttr &&
                     !isAttr.hasColon &&
@@ -42,6 +44,21 @@ export class DefinitionHandler {
                     );
                     return this.getComponentLocationLink(isAttr.value, originRange);
                 }
+
+                // Cmd/Ctrl+click any other attribute (a prop passed through to whatever
+                // component `is` resolves to) -> treat it exactly like a prop on a normal
+                // component tag. Only possible when `is` is a static, resolvable name.
+                if (isAttr && !isAttr.hasColon && !/[{}%]/.test(isAttr.value)) {
+                    const attributeMatch = this.parser.findAttributeNameAtOffset(content, component.node, offset);
+                    if (attributeMatch && attributeMatch.name !== 'is') {
+                        const originRange = Range.create(
+                            document.positionAt(attributeMatch.start),
+                            document.positionAt(attributeMatch.end)
+                        );
+                        return this.getPropLocationLink(isAttr.value, attributeMatch.name, originRange);
+                    }
+                }
+
                 return null;
             }
 

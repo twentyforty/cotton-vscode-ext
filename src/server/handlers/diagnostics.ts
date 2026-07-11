@@ -43,6 +43,37 @@ export class DiagnosticsHandler {
                 continue;
             }
 
+            // <c-slot name="icon"> - flag a slot name that the enclosing component doesn't
+            // actually reference anywhere (typo, renamed slot, etc). Only checked when the name
+            // is a static string; dynamic (`:name="expr"`) or template-embedded values can't be
+            // checked here.
+            if (component.name === 'slot') {
+                const nameAttr = this.parser.getAttributeValue(content, component.node, 'name');
+                if (nameAttr && !nameAttr.hasColon && !/[{}%]/.test(nameAttr.value)) {
+                    const enclosingComponentName = this.parser.findEnclosingComponentName(component.node);
+                    const enclosingInfo = enclosingComponentName
+                        ? await this.componentIndex.findComponent(enclosingComponentName)
+                        : null;
+
+                    if (enclosingInfo) {
+                        const isReferenced = await this.componentIndex.hasSlotReference(enclosingInfo.filePath, nameAttr.value);
+                        if (!isReferenced) {
+                            diagnostics.push({
+                                severity: DiagnosticSeverity.Warning,
+                                range: Range.create(
+                                    document.positionAt(nameAttr.start),
+                                    document.positionAt(nameAttr.end)
+                                ),
+                                message: `Slot '${nameAttr.value}' doesn't appear to be used anywhere in <c-${enclosingComponentName}> (no {{ ${nameAttr.value} }} or {% if ${nameAttr.value} %} found). Check for a typo.`,
+                                source: 'Cotton',
+                                code: 'cotton-slot-not-referenced'
+                            });
+                        }
+                    }
+                }
+                continue;
+            }
+
             if (this.componentIndex.isBuiltinDirective(component.name)) {
                 continue;
             }

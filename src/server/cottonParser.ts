@@ -203,19 +203,30 @@ export class CottonParser {
         const nameAttr = this.getAttributeValue(content, node, 'name');
         if (!nameAttr || offset < nameAttr.start || offset > nameAttr.end) return null;
 
+        const componentName = this.findEnclosingComponentName(node);
+        if (!componentName) return null;
+
+        return {
+            componentName,
+            slotName: nameAttr.value,
+            valueStart: nameAttr.start,
+            valueEnd: nameAttr.end
+        };
+    }
+
+    /**
+     * Walk up from a node to find the nearest ancestor that's a real Cotton component tag
+     * (skipping the built-in `<c-vars>`/`<c-slot>`/`<c-component>` directives) - e.g. to find
+     * which component a `<c-slot>` belongs to.
+     */
+    findEnclosingComponentName(node: Node): string | null {
         let ancestor = node.parent;
         while (ancestor) {
             if (ancestor.tag?.startsWith('c-') && !['c-vars', 'c-slot', 'c-component'].includes(ancestor.tag)) {
-                return {
-                    componentName: ancestor.tag.slice(2),
-                    slotName: nameAttr.value,
-                    valueStart: nameAttr.start,
-                    valueEnd: nameAttr.end
-                };
+                return ancestor.tag.slice(2);
             }
             ancestor = ancestor.parent;
         }
-
         return null;
     }
 
