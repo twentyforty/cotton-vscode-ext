@@ -1,0 +1,13 @@
+.vscode/**
+.gitignore
+.yarnrc
+src/**
+test-workspace/**
+pycharm-plugin/**
+tsconfig.json
+**/*.map
+**/*.ts
+**/tsconfig.json
+.eslintrc.json
+**/.DS_Store
+*.vsix

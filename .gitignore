@@ -129,3 +129,6 @@ dist
 .yarn/install-state.gz
 .pnp.*
 node_modules
+
+# Manual test fixture workspace for exercising the extension via F5
+test-workspace/
