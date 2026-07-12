@@ -2,13 +2,32 @@
 
 All notable changes to the Django Cotton VS Code extension are documented here.
 
+## 1.0.1
+
+Internal packaging update — no changes to extension behavior or settings.
+
+### Architecture
+
+- **Language server extracted to a standalone npm package.** Cotton intelligence now ships as [`django-cotton-lsp`](https://www.npmjs.com/package/django-cotton-lsp), published separately so the same LSP can power Neovim, Helix, and other editors. The VS Code extension is now a thin client that depends on this package.
+- **Monorepo layout.** Extension sources live under `packages/vscode-extension/`; language server sources under `packages/language-server/`. No action required — existing `djangoCotton.templatePaths` settings and all features work exactly as before.
+
+### For users of other editors
+
+Install the language server directly:
+
+```bash
+npm install -g django-cotton-lsp
+```
+
+See the [django-cotton-lsp README](https://github.com/twentyforty/cotton-vscode-ext/tree/main/packages/language-server) for Neovim and Helix setup.
+
 ## 1.0.0
 
 A full rewrite of the extension onto a **Language Server Protocol (LSP)** architecture, plus a large batch of new navigation, completion, and validation features. This is a milestone release marking the extension's transition from a single-file, VS Code-only script to a proper client/server language tool.
 
 ### Architecture
 
-- **Rewritten as a language server.** All Cotton-parsing intelligence now lives in an editor-agnostic language server (`src/server`), built on `vscode-languageserver` and `vscode-html-languageservice` for real AST-based HTML parsing (instead of regex-only scanning). The VS Code extension (`src/client`) is now a thin client that spawns the server and wires it into the editor.
+- **Rewritten as a language server.** All Cotton-parsing intelligence now lives in an editor-agnostic language server, built on `vscode-languageserver` and `vscode-html-languageservice` for real AST-based HTML parsing (instead of regex-only scanning). The VS Code extension is a thin client that spawns the server and wires it into the editor.
 - **No action required to upgrade.** Existing settings (`djangoCotton.templatePaths`) keep working unchanged; the extension behaves the same way out of the box, just with more features and better parsing accuracy.
 - **New `cotton.config.json`.** Project-level configuration file, read from the workspace root, as an alternative to VS Code settings - useful for keeping Cotton config in source control or for other editors. Settings are resolved with priority: editor settings > LSP `initializationOptions` (for non-VS Code clients) > `cotton.config.json` > defaults.
 - **Glob pattern support for template paths.** `djangoCotton.templatePaths` now accepts glob patterns in addition to plain directories, e.g. `"**/cotton"` or `"apps/*/templates/cotton"`.

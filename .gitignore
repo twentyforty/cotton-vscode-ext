@@ -130,5 +130,8 @@ dist
 .pnp.*
 node_modules
 
+# Packaged extension builds
+*.vsix
+
 # Manual test fixture workspace for exercising the extension via F5
 test-workspace/
