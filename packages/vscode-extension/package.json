@@ -60,7 +60,7 @@
         "watch": "tsc -watch -p ./"
     },
     "dependencies": {
-        "django-cotton-lsp": "1.0.0",
+        "django-cotton-lsp": "1.0.1",
         "vscode-languageclient": "^9.0.1"
     },
     "devDependencies": {

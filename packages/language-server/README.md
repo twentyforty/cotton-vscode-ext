@@ -1,6 +1,6 @@
 # django-cotton-lsp
 
-Language Server for [Django Cotton](https://django-cotton.com/) templates. Powers the [Django Cotton VS Code extension](https://marketplace.visualstudio.com/) and any other LSP-capable editor.
+Language Server for [Django Cotton](https://django-cotton.com/) templates. Powers the [Django Cotton VS Code extension](https://marketplace.visualstudio.com/items?itemName=twentyforty.django-cotton) and any other LSP-capable editor.
 
 ## Install
 
@@ -81,4 +81,4 @@ Settings are resolved with this priority:
 
 ## VS Code extension
 
-For VS Code-specific features (unused component badges, Explorer context menu), use the [Django Cotton extension](https://github.com/twentyforty/cotton-vscode-ext/tree/main/packages/vscode-extension) instead of wiring the server manually.
+For VS Code-specific features (unused component badges, Explorer context menu), install the [Django Cotton VS Code extension](https://marketplace.visualstudio.com/items?itemName=twentyforty.django-cotton) instead of wiring the server manually.

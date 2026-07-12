@@ -8,7 +8,8 @@
         "compile": "npm run compile --workspaces --if-present",
         "watch": "npm run watch --workspace=django-cotton",
         "vscode:prepublish": "npm run compile",
-        "package:extension": "bash scripts/package-extension.sh"
+        "package:extension": "bash scripts/package-extension.sh",
+        "publish:extension": "bash scripts/package-extension.sh --publish"
     },
     "devDependencies": {
         "typescript": "^5.1.3"

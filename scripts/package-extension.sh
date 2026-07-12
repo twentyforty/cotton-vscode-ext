@@ -30,4 +30,11 @@ npx @vscode/vsce package
 
 VSIX="$(ls -1 "$STAGE"/*.vsix | head -1)"
 cp "$VSIX" "$EXT/"
-echo "Done: $EXT/$(basename "$VSIX")"
+echo "Packaged: $EXT/$(basename "$VSIX")"
+
+if [[ "${1:-}" == "--publish" ]]; then
+  echo "Publishing to VS Code Marketplace..."
+  npx @vscode/vsce publish -i "$VSIX"
+else
+  echo "To publish: npx @vscode/vsce publish -i $EXT/$(basename "$VSIX")"
+fi

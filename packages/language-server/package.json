@@ -1,8 +1,9 @@
 {
     "name": "django-cotton-lsp",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Language Server for Django Cotton templates",
     "license": "MIT",
+    "homepage": "https://marketplace.visualstudio.com/items?itemName=twentyforty.django-cotton",
     "repository": {
         "type": "git",
         "url": "https://github.com/twentyforty/cotton-vscode-ext",
