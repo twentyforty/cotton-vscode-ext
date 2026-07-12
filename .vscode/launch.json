@@ -7,10 +7,10 @@
             "request": "launch",
             "runtimeExecutable": "${execPath}",
             "args": [
-                "--extensionDevelopmentPath=${workspaceFolder}"
+                "--extensionDevelopmentPath=${workspaceFolder}/packages/vscode-extension"
             ],
             "outFiles": [
-                "${workspaceFolder}/out/**/*.js"
+                "${workspaceFolder}/packages/vscode-extension/out/**/*.js"
             ],
             "preLaunchTask": "npm: compile"
         },
@@ -21,7 +21,7 @@
             "port": 6009,
             "restart": true,
             "outFiles": [
-                "${workspaceFolder}/out/server/**/*.js"
+                "${workspaceFolder}/packages/language-server/out/**/*.js"
             ]
         }
     ],

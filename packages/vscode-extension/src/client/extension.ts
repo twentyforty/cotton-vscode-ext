@@ -1,4 +1,3 @@
-import * as path from 'path';
 import * as vscode from 'vscode';
 import { ExtensionContext } from 'vscode';
 import {
@@ -11,11 +10,12 @@ import { UnusedComponentDecorationProvider } from './unusedComponentDecorations'
 
 let client: LanguageClient;
 
+function getServerModule(): string {
+    return require.resolve('django-cotton-lsp/out/server.js');
+}
+
 export function activate(context: ExtensionContext) {
-    // Path to the server module
-    const serverModule = context.asAbsolutePath(
-        path.join('out', 'server', 'server.js')
-    );
+    const serverModule = getServerModule();
 
     // Server options - run the server as a separate Node process
     const serverOptions: ServerOptions = {

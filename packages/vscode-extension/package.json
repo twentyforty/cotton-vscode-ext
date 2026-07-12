@@ -1,0 +1,84 @@
+{
+    "name": "django-cotton",
+    "displayName": "Django Cotton",
+    "description": "Comprehensive VS Code support for Django Cotton templates with intelligent autocompletion, navigation, and error detection",
+    "version": "1.0.0",
+    "publisher": "twentyforty",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/twentyforty/cotton-vscode-ext",
+        "directory": "packages/vscode-extension"
+    },
+    "engines": {
+        "vscode": "^1.85.0"
+    },
+    "categories": [
+        "Programming Languages",
+        "Other"
+    ],
+    "activationEvents": [
+        "onLanguage:html",
+        "onLanguage:django-html",
+        "onCommand:djangoCotton.findComponentUsages"
+    ],
+    "main": "./out/client/extension.js",
+    "contributes": {
+        "configuration": {
+            "title": "Django Cotton",
+            "properties": {
+                "djangoCotton.templatePaths": {
+                    "type": "array",
+                    "default": ["templates/cotton"],
+                    "items": {
+                        "type": "string"
+                    },
+                    "description": "Paths or glob patterns to search for Cotton template files. Examples: 'templates/cotton', '**/cotton', 'apps/*/templates/cotton'"
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "djangoCotton.findComponentUsages",
+                "title": "Find Component Usages",
+                "category": "Django Cotton"
+            }
+        ],
+        "menus": {
+            "explorer/context": [
+                {
+                    "command": "djangoCotton.findComponentUsages",
+                    "when": "resourceExtname == .html",
+                    "group": "4_search"
+                }
+            ]
+        }
+    },
+    "scripts": {
+        "vscode:prepublish": "npm run compile",
+        "compile": "tsc -p ./",
+        "watch": "tsc -watch -p ./"
+    },
+    "dependencies": {
+        "django-cotton-lsp": "1.0.0",
+        "vscode-languageclient": "^9.0.1"
+    },
+    "devDependencies": {
+        "@types/vscode": "^1.85.0",
+        "@types/node": "^16.18.34",
+        "typescript": "^5.1.3"
+    },
+    "keywords": [
+        "django",
+        "cotton",
+        "template",
+        "html",
+        "autocomplete",
+        "web development",
+        "language server"
+    ],
+    "icon": "images/icon.png",
+    "galleryBanner": {
+        "color": "#1e415e",
+        "theme": "dark"
+    }
+}
