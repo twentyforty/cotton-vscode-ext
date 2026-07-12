@@ -27,6 +27,7 @@ npm publish -w django-cotton-lsp
 ### Package the VS Code extension
 
 ```bash
+npm run package:extension
 cd packages/vscode-extension
-npx @vscode/vsce package
+npx @vscode/vsce publish
 ```

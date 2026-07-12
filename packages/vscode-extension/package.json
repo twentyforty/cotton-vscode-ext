@@ -28,7 +28,9 @@
             "properties": {
                 "djangoCotton.templatePaths": {
                     "type": "array",
-                    "default": ["templates/cotton"],
+                    "default": [
+                        "templates/cotton"
+                    ],
                     "items": {
                         "type": "string"
                     },
@@ -54,7 +56,6 @@
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./"
     },
@@ -63,8 +64,8 @@
         "vscode-languageclient": "^9.0.1"
     },
     "devDependencies": {
-        "@types/vscode": "^1.85.0",
         "@types/node": "^16.18.34",
+        "@types/vscode": "^1.85.0",
         "typescript": "^5.1.3"
     },
     "keywords": [

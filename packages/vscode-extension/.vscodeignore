@@ -1,6 +1,8 @@
 .vscode/**
 .gitignore
 .yarnrc
+.npmrc
+.npmrc
 src/**
 test-workspace/**
 pycharm-plugin/**
@@ -11,3 +13,5 @@ tsconfig.json
 .eslintrc.json
 **/.DS_Store
 *.vsix
+node_modules/**/README.md
+node_modules/**/License.txt
